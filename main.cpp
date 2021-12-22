@@ -2,12 +2,13 @@
 #include <vector>
 #include <fstream>
 #include <queue>
+#include <stack>
 #include <algorithm>
 #define nmax 100010
 using namespace std;
 
-ifstream f("darb.in");
-ofstream g("darb.out");
+ifstream f("ciclueuler.in");
+ofstream g("ciclueuler.out");
 
 class Graf{
 private:
@@ -17,7 +18,7 @@ private:
     int dim[nmax];
     vector<int> topo;
     int dist[nmax] = {-1};
-    bool viz[nmax] = {false};
+    bool viz[nmax * 5] = {false};
     int n, m, componente_conexe;
 
 public:
@@ -256,21 +257,65 @@ public:
         dfs_diametru(nod1, 0, dmax, nodmax);
         return dmax + 1;
     }
+
+    void ciclu_Eulerian(int start, vector<pair<int, int>> l[], vector<int> &c){
+        stack <int> stiva;
+        //gol_viz();
+        stiva.push(start);
+        while(!stiva.empty())
+        {
+            int nod = stiva.top();
+            if(!l[nod].empty())
+            {
+                int vecin = l[nod].back().first;
+                int nrMuchie = l[nod].back().second;
+                l[nod].pop_back();
+                if(!viz[nrMuchie])
+                {
+                    viz[nrMuchie] = true;
+                    stiva.push(vecin);
+                }
+            }
+            else
+            {
+                c.push_back(nod);
+                stiva.pop();
+            }
+        }
+    }
+
+    void rez_Euler(vector<pair<int, int>> l[]){
+        vector <int> ciclu;
+        for(int i = 0; i <= n; i++)
+        {
+            if(l[i].size() % 2 == 1)
+            {
+                g << "-1";
+                return;
+            }
+        }
+        ciclu_Eulerian(1, l, ciclu);
+        for(int i = 0; i < ciclu.size() - 1; i++)
+        {
+            g << ciclu[i] << " ";
+        }
+    }
+
 };
 
 
 
 int main()
 {
-    int n, x, y;
-    f >> n;
-    vector<vector<int>> v(n + 1);
-    for(int i = 1; i < n; i++){
+    int n, m, x, y;
+    f >> n >> m;
+    vector<pair <int, int>> v[n + 5];
+    for(int i = 1; i <= m; i++){
         f >> x >> y;
-        v[x].push_back(y);
-        v[y].push_back(x);
+        v[x].emplace_back(y,i);
+        v[y].emplace_back(x,i);
     }
-    Graf graf(n, n-1, v);
-    g << graf.diametru();
+    Graf graf(n, m);
+    graf.rez_Euler(v);
     return 0;
 }
