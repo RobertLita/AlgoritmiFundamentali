@@ -5,10 +5,11 @@
 #include <stack>
 #include <algorithm>
 #define nmax 100010
+#define inf 1 << 29
 using namespace std;
 
-ifstream f("ciclueuler.in");
-ofstream g("ciclueuler.out");
+ifstream f("hamilton.in");
+ofstream g("hamilton.out");
 
 class Graf{
 private:
@@ -18,7 +19,7 @@ private:
     int dim[nmax];
     vector<int> topo;
     int dist[nmax] = {-1};
-    bool viz[nmax * 5] = {false};
+    bool viz[nmax] = {false};
     int n, m, componente_conexe;
 
 public:
@@ -301,21 +302,54 @@ public:
         }
     }
 
+    int HamiltonianMin(const vector<vector<int>>& cost){
+        vector<vector<int>> c(1 << n);
+        for (int i = 0; i < 1 << n; i++){
+            c[i].resize(n, inf);
+        }
+        c[1][0] = 0;
+        for(int i = 1; i < 1 << n; i++){
+            for(int j = 0; j < n; j++){
+                if(c[i][j] != inf){
+                    for(auto &k : la[j]){
+                        if(!(i & (1 << k)))
+                            c[i | (1 << k)][k] = min(c[i | (1 << k)][k], c[i][j] + cost[j][k]);
+                    }
+                }
+            }
+        }
+        vector<int> penult;
+        int mn = inf;
+        for(int i = 1; i < n ; i++)
+            for(auto &k : la[i])
+                if(k == 0) penult.push_back(i);
+        for(auto &k : penult){
+            mn = min(mn, c[(1 << n) - 1][k] + cost[k][0]);
+        }
+        return mn;
+    }
 };
 
 
 
 int main()
 {
-    int n, m, x, y;
+    int n, m, x, y, c;
     f >> n >> m;
-    vector<pair <int, int>> v[n + 5];
-    for(int i = 1; i <= m; i++){
-        f >> x >> y;
-        v[x].emplace_back(y,i);
-        v[y].emplace_back(x,i);
+    vector<vector<int>> la(n);
+    vector<vector<int>> cost(n);
+    for(int i = 0; i < n; i++) {
+        cost[i].resize(n, inf);
     }
-    Graf graf(n, m);
-    graf.rez_Euler(v);
+    for(int i = 1; i <= m; i++){
+        f >> x >> y >> c;
+        la[x].push_back(y);
+        la[y].push_back(x);
+        cost[x][y] = c;
+    }
+    Graf graf(n, m, la);
+    int mn = graf.HamiltonianMin(cost);
+    if(mn == inf) g << "Nu exista solutie";
+    else g << mn;
     return 0;
 }
