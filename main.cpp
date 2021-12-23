@@ -10,22 +10,57 @@ using namespace std;
 
 ifstream f("hamilton.in");
 ofstream g("hamilton.out");
+class disjoint{
+private:
+    int par[nmax];
+    int dim[nmax];
+    int n;
+public:
+    disjoint(int N): n(N){
+        for(int i = 1;i <= n;++i) {
+            par[i] = i;
+            dim[i] = 1;
+        }
+    }
+    int find(int x) {
+        int xx = x, aux;
+        while(x != par[x]) {
+            x = par[x];
+        }
+        while(xx != x){
+            aux = par[xx];
+            par[xx] = x;
+            xx = aux;
+        }
+        return x;
+    }
+    void unite(int x, int y)
+    {
+        x = find(x);
+        y = find(y);
+        if(dim[x] >= dim[y])
+        {
+            par[y] = x;
+            dim[x] += dim[y];
+        }
+        else
+        {
+            par[y] = x;
+            dim[y] += dim[x];
+        }
+    }
+};
 
 class Graf{
 private:
     vector<vector<int>> la;
-    vector<vector<int>> la_t;
-    int par[nmax];
-    int dim[nmax];
-    vector<int> topo;
-    int dist[nmax] = {-1};
-    bool viz[nmax] = {false};
-    int n, m, componente_conexe;
+    bool viz[100010] = {false};
+    int n;
 
 public:
-    Graf(): n(0), m(0), componente_conexe(0){ }
-    Graf(int x, int y = 0): n(x), m(y), componente_conexe(0){ }
-    Graf(int x, int y, const vector<vector<int>>& v): n(x), m(y), componente_conexe(0), la(v) { }
+    Graf(): n(0){ }
+    explicit Graf(int x, int y = 0): n(x){ }
+    Graf(int x, int y, const vector<vector<int>>& v): n(x), la(v) { }
     void dfs(int nod)
     {
         viz[nod] = true;
@@ -36,23 +71,26 @@ public:
 
     int nr_componente()
     {
+        int comp_conex = 0;
         for(int i = 1; i <= n; i++)
             if(!viz[i]) {
                 dfs(i);
-                componente_conexe++;
+                comp_conex++;
             }
-        return componente_conexe;
+        return comp_conex;
     }
 
-    void bfs(int nod)
+    void bfs(int nod, int dist[])
     {
-        int c[nmax],p = 0,u = -1;
+        int c[nmax],p = 0, u = -1;
+        for(int i = 1; i <= n ;i++)
+            dist[i] = -1;
         c[++u] = nod;
         dist[nod] = 0;
         while(p <= u)
         {
             int x = c[p];
-            for(auto i:la[x])
+            for(auto i : la[x])
                 if(dist[i] == -1)
                 {
                     c[++u] = i;
@@ -67,13 +105,13 @@ public:
         for(int i = 1; i <= n; i++)
             viz[i] = false;
     }
-    void ctc(int nr_comp, int comp[], const vector<vector<int>>& ctc)
+    void ctc(int nr_comp, int comp[], const vector<vector<int>>& ctc, const vector<vector<int>>& la_t)
     {
-
+        vector<int> topo;
         gol_viz();
         for(int i = 1; i <= n; i++)
             if(!viz[i])
-                sorare_topologica(i);
+                sorare_topologica(i, topo);
         reverse(topo.begin(), topo.end());
         for(auto i:topo)
         {
@@ -81,28 +119,28 @@ public:
             {
                 nr_comp++;
                 gol_viz();
-                dfs_t(i, nr_comp, ctc, comp);
+                dfs_t(i, nr_comp, ctc, comp, la_t);
             }
         }
     }
 
-    void dfs_t(int nod, int nr_comp, vector<vector<int>> ctc, int comp[])
+    void dfs_t(int nod, int nr_comp, vector<vector<int>> ctc, int comp[], vector<vector<int>> la_t)
     {
         viz[nod] = true;
         comp[nod] = nr_comp;
         ctc[nr_comp].push_back(nod);
         for(auto i:la_t[nod])
             if(!viz[i])
-                dfs_t(i, nr_comp, ctc, comp);
+                dfs_t(i, nr_comp, ctc, comp, la_t);
     }
 
-    void sorare_topologica(int nod)
+    void sorare_topologica(int nod, vector<int> &topo)
     {
         viz[nod] = true;
         for(auto i:la[nod])
         {
             if(viz[i] == 0)
-                sorare_topologica(i);
+                sorare_topologica(i, topo);
         }
         topo.push_back(nod);
     }
@@ -125,59 +163,25 @@ public:
         }
         return true;
     }
-    void init()
-    {
-        for(int i = 1;i <= n;++i) {
-            par[i] = i;
-            dim[i] = 1;
-        }
-    }
-    int find(int x) {
-        int xx = x, aux;
-        while(x != par[x]) {
-            x = par[x];
-        }
-        while(xx != x){
-            aux = par[xx];
-            par[xx] = x;
-            xx = aux;
-        }
-        return x;
 
-    }
 
-    void unite(int x, int y)
-    {
-       x = find(x);
-       y = find(y);
-        if(dim[x] >= dim[y])
-        {
-            par[y] = x;
-            dim[x] += dim[y];
-        }
-        else
-        {
-            par[y] = x;
-            dim[y] += dim[x];
-        }
-    }
     vector<pair<int, pair<int, int>>> kruskal(vector<pair<int, pair<int, int>>>& muchii)
     {
         vector<pair<int, pair<int, int>>> solutie;
         sort(muchii.begin(), muchii.end());
-        init();
+        disjoint D(n);
         for(auto &muchie : muchii)
         {
-            if(find(muchie.second.first) != find(muchie.second.second))
+            if(D.find(muchie.second.first) != D.find(muchie.second.second))
             {
-                unite(muchie.second.first, muchie.second.second);
+                D.unite(muchie.second.first, muchie.second.second);
                 solutie.push_back({muchie.first, {muchie.second.first, muchie.second.second}});
             }
         }
         return solutie;
     }
 
-    vector<int> bellman_ford(int start, vector<pair<int, int>> g[])
+    vector<int> bellman_ford(int start, vector<pair<int, int>> g[]) //g[x].first = y (x y = muchie), g[x].second = costul muchiei (x, y)
     {
         vector<int> D(nmax / 2, 1 << 30);
         vector<int> cnt(nmax / 2);
@@ -261,7 +265,6 @@ public:
 
     void ciclu_Eulerian(int start, vector<pair<int, int>> l[], vector<int> &c){
         stack <int> stiva;
-        //gol_viz();
         stiva.push(start);
         while(!stiva.empty())
         {
@@ -328,28 +331,22 @@ public:
         }
         return mn;
     }
+    void addEdge(int x, int y){
+        la[x].push_back(y);
+    }
 };
 
 
 
 int main()
 {
-    int n, m, x, y, c;
+    int n, m, x, y;
     f >> n >> m;
-    vector<vector<int>> la(n);
-    vector<vector<int>> cost(n);
-    for(int i = 0; i < n; i++) {
-        cost[i].resize(n, inf);
+    Graf graf(n, m);
+    for(int i = 1; i <= m; i++) {
+        f >> x >> y;
+        graf.addEdge(x,y);
+        graf.addEdge(y,x);
     }
-    for(int i = 1; i <= m; i++){
-        f >> x >> y >> c;
-        la[x].push_back(y);
-        la[y].push_back(x);
-        cost[x][y] = c;
-    }
-    Graf graf(n, m, la);
-    int mn = graf.HamiltonianMin(cost);
-    if(mn == inf) g << "Nu exista solutie";
-    else g << mn;
     return 0;
 }
